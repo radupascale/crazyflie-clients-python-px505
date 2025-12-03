@@ -25,17 +25,17 @@ Tab for tuning PID controller, mainly for larger quads.
 """
 
 import logging
-
-from PyQt6 import QtWidgets
-from PyQt6 import uic
-from PyQt6.QtCore import pyqtSignal, Qt
+import subprocess
 import time
+
+from cflib.crazyflie import Crazyflie, Param
+from cflib.utils.callbacks import Syncer
+from PyQt6 import QtWidgets, uic
+from PyQt6.QtCore import Qt, pyqtSignal
 
 import cfclient
 from cfclient.ui.tab_toolbox import TabToolbox
 from cfclient.ui.widgets.super_slider import SuperSlider
-from cflib.crazyflie import Crazyflie, Param
-from cflib.utils.callbacks import Syncer
 
 __author__ = 'Bitcraze AB'
 __all__ = ['TuningTab']
@@ -137,7 +137,10 @@ class TuningTab(TabToolbox, tuning_tab_class):
         self.store_button.clicked.connect(self._store_button_clicked)
         self.clear_stored_button.clicked.connect(self._clear_stored_button_clicked)
         self.default_values_button.clicked.connect(self._default_values_button_clicked)
+        # reset button
+        self.reset_button.clicked.connect(self._reset_button_clicked)
         self._enable_ui_objects(False)
+        
 
     def _set_up_param_mappings(self):
         mappers: dict[str, SliderParamMapper] = {}
@@ -273,6 +276,16 @@ class TuningTab(TabToolbox, tuning_tab_class):
             param.get_default_value(full_param_name, syncer.success_cb)
             syncer.wait()
             self._param_updated_cb(*syncer.success_args)
+            
+    def _reset_button_clicked(self):
+        reset_path = "/app/data/CrazySim/crazyflie-firmware/tools/crazyflie-simulation/simulator_files/gazebo/launch/reset.sh"
+        
+        try:
+            subprocess.Popen(["bash", reset_path])
+            logger.info("Reset script executed")
+        except Exception as e:
+            logger.error("Failed to execute reset script: {}".format(e))
+        
 
     def _enable_ui_objects(self, enabled):
         objects = [
@@ -283,6 +296,7 @@ class TuningTab(TabToolbox, tuning_tab_class):
             self.store_button,
             self.clear_stored_button,
             self.default_values_button,
+            self.reset_button
         ]
 
         for item in objects:
