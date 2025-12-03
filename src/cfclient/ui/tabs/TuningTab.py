@@ -28,14 +28,13 @@ import logging
 import subprocess
 import time
 
+import cfclient
+from cfclient.ui.tab_toolbox import TabToolbox
+from cfclient.ui.widgets.super_slider import SuperSlider
 from cflib.crazyflie import Crazyflie, Param
 from cflib.utils.callbacks import Syncer
 from PyQt6 import QtWidgets, uic
 from PyQt6.QtCore import Qt, pyqtSignal
-
-import cfclient
-from cfclient.ui.tab_toolbox import TabToolbox
-from cfclient.ui.widgets.super_slider import SuperSlider
 
 __author__ = 'Bitcraze AB'
 __all__ = ['TuningTab']
@@ -278,7 +277,7 @@ class TuningTab(TabToolbox, tuning_tab_class):
             self._param_updated_cb(*syncer.success_args)
             
     def _reset_button_clicked(self):
-        reset_path = "/app/data/CrazySim/crazyflie-firmware/tools/crazyflie-simulation/simulator_files/gazebo/launch/reset.sh"
+        reset_path = "/home/pxdev/CrazySim/crazyflie-firmware/tools/crazyflie-simulation/simulator_files/gazebo/launch/reset.sh"
         
         try:
             subprocess.Popen(["bash", reset_path])
