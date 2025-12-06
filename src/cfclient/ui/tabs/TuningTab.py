@@ -24,9 +24,13 @@
 Tab for tuning PID controller, mainly for larger quads.
 """
 
+import glob
+import json
 import logging
+import os
 import subprocess
 import time
+from datetime import datetime
 
 import cfclient
 from cfclient.ui.tab_toolbox import TabToolbox
@@ -91,6 +95,7 @@ class SliderParamMapper:
     # Called when a parameter in the CF has changed, this is also true if we initiated the param update
     def param_updated_cb(self, full_param_name, value):
         if time.time() > self.receive_block_time:
+            self.slider_changed(value)
             self.slider.set_value(float(value))
 
             if self.linked_mapper is not None:
@@ -136,6 +141,7 @@ class TuningTab(TabToolbox, tuning_tab_class):
         self.store_button.clicked.connect(self._store_button_clicked)
         self.clear_stored_button.clicked.connect(self._clear_stored_button_clicked)
         self.default_values_button.clicked.connect(self._default_values_button_clicked)
+        self.most_recent_button.clicked.connect(self._most_recent_button_clicked)
         # reset button
         self.reset_button.clicked.connect(self._reset_button_clicked)
         self._enable_ui_objects(False)
@@ -257,24 +263,62 @@ class TuningTab(TabToolbox, tuning_tab_class):
 
     def _store_button_clicked(self):
         param: Param = self._helper.cf.param
-        for full_param_name in self.mappers.keys():
-            # syncer = Syncer()
-            param.persistent_store(full_param_name)
+        pid_root = "/home/pxdev/drone-parameters/"
+        if os.path.exists(pid_root):
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"saved_params_{timestamp}.json"
+            with open(pid_root + "/" + filename, 'w') as f:
+                data = {}
+                for full_param_name in self.mappers.keys():
+                    data[full_param_name] = round(float(param.get_value(full_param_name)), 2)
+                json.dump(data, f, indent=4,sort_keys=True)
+                
+        else:
+            print(f"'{pid_root}' was not found.")
+        
 
     def _clear_stored_button_clicked(self):
         param: Param = self._helper.cf.param
         for full_param_name in self.mappers.keys():
             param.persistent_clear(full_param_name)
 
+    def _most_recent_button_clicked(self):
+        pid_root = "/home/pxdev/drone-parameters/"
+        
+        if os.path.exists(pid_root):
+            
+            list_of_files = glob.glob(pid_root + 'saved_params_*.json') 
+
+            if list_of_files:
+                # Get the most recently created file
+                latest_file = max(list_of_files, key=os.path.getctime)
+
+                with open(latest_file, 'r') as f:
+                    pid_params = json.load(f)
+                    for full_param_name in self.mappers.keys():
+                        self._param_updated_cb(full_param_name, pid_params[full_param_name])
+        else:
+            print(f"'{pid_root}' was not found.")
+        
+        
+
     def _default_values_button_clicked(self):
         param: Param = self._helper.cf.param
-        for full_param_name in self.mappers.keys():
-            # For some reason we run into problems if we try to get all params in one go. Pace by getting them
-            # one by one.
-            syncer = Syncer()
-            param.get_default_value(full_param_name, syncer.success_cb)
-            syncer.wait()
-            self._param_updated_cb(*syncer.success_args)
+        pid_path = "/home/pxdev/drone-parameters/default.json"
+        if os.path.exists(pid_path):
+            with open(pid_path, 'r') as f:
+                pid_params = json.load(f)
+                
+                for full_param_name in self.mappers.keys():
+                    # For some reason we run into problems if we try to get all params in one go. Pace by getting them
+                    # one by one.
+                    # syncer = Syncer()
+                    # param.get_default_value(full_param_name, syncer.success_cb)
+                    # syncer.wait()
+                    # self._param_updated_cb(*syncer.success_args)
+                    self._param_updated_cb(full_param_name, pid_params[full_param_name])
+        else:
+            print(f"'{pid_path}' was not found.")
             
     def _reset_button_clicked(self):
         reset_path = "/home/pxdev/CrazySim/crazyflie-firmware/tools/crazyflie-simulation/simulator_files/gazebo/launch/reset.sh"
@@ -295,6 +339,7 @@ class TuningTab(TabToolbox, tuning_tab_class):
             self.store_button,
             self.clear_stored_button,
             self.default_values_button,
+            self.most_recent_button,
             self.reset_button
         ]
 

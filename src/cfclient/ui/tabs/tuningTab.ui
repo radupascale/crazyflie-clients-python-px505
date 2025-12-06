@@ -719,6 +719,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="most_recent_button">
+       <property name="toolTip">
+        <string>Load the most recent params file in the drone_parameters dir</string>
+       </property>
+       <property name="text">
+        <string>Load Recent</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="store_button">
        <property name="toolTip">
         <string>Store values in the persistent memory to use them after a restart.</string>
